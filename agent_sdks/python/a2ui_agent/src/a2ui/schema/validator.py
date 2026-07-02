@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Union, Mapping
 
 from .constants import VERSION_0_8, VERSION_0_9, VERSION_1_0
 from .validator_v08 import (
@@ -48,7 +48,7 @@ def extract_component_required_fields(catalog: A2uiCatalog) -> Dict[str, Set[str
 
 def extract_component_ref_fields(
     catalog: A2uiCatalog,
-) -> Dict[str, Tuple[Set[str], Set[str]]]:
+) -> Mapping[str, Tuple[Set[str], Set[str]]]:
   if catalog.version == VERSION_0_8:
     return v08_ref(catalog)
   result = CatalogSchemaValidator(
@@ -171,14 +171,16 @@ class A2uiValidatorWrapperV10:
         validate_recursion_and_paths,
     )
 
-    all_components = []
-    for msg in messages:
-      if not isinstance(msg, dict):
+    all_components: list[dict[str, Any]] = []
+    for message in messages:
+      if not isinstance(message, dict):
         continue
-      if "createSurface" in msg and isinstance(msg["createSurface"], dict):
-        all_components.extend(msg["createSurface"].get("components", []))
-      elif "updateComponents" in msg and isinstance(msg["updateComponents"], dict):
-        all_components.extend(msg["updateComponents"].get("components", []))
+      if "createSurface" in message and isinstance(message["createSurface"], dict):
+        all_components.extend(message["createSurface"].get("components", []))
+      elif "updateComponents" in message and isinstance(
+          message["updateComponents"], dict
+      ):
+        all_components.extend(message["updateComponents"].get("components", []))
 
     if all_components:
       ref_fields = CatalogSchemaValidator(
@@ -203,7 +205,9 @@ class A2uiValidator:
     ver = catalog.version
     self.version = ver if isinstance(ver, str) else VERSION_0_8
     if self.version == VERSION_0_8:
-      self._delegator = LegacyA2uiValidatorV08(catalog)
+      self._delegator: Union[
+          LegacyA2uiValidatorV08, A2uiValidatorWrapper, A2uiValidatorWrapperV10
+      ] = LegacyA2uiValidatorV08(catalog)
     elif self.version == VERSION_1_0:
       import os
 
