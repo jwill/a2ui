@@ -40,9 +40,10 @@ def extract_component_required_fields(catalog: A2uiCatalog) -> Dict[str, Set[str
   all_components = cs.get("components", {}) if isinstance(cs, dict) else {}
   req_map = {}
   for comp_name, comp_schema in all_components.items():
-    reqs = set(comp_schema.get("required", [])) - {"component"}
-    if reqs:
-      req_map[comp_name] = reqs
+    if isinstance(comp_schema, dict):
+      reqs = set(comp_schema.get("required", [])) - {"component"}
+      if reqs:
+        req_map[comp_name] = reqs
   return req_map
 
 
@@ -176,11 +177,15 @@ class A2uiValidatorWrapperV10:
       if not isinstance(message, dict):
         continue
       if "createSurface" in message and isinstance(message["createSurface"], dict):
-        all_components.extend(message["createSurface"].get("components", []))
+        comps = message["createSurface"].get("components")
+        if isinstance(comps, list):
+          all_components.extend(comps)
       elif "updateComponents" in message and isinstance(
           message["updateComponents"], dict
       ):
-        all_components.extend(message["updateComponents"].get("components", []))
+        comps = message["updateComponents"].get("components")
+        if isinstance(comps, list):
+          all_components.extend(comps)
 
     if all_components:
       ref_fields = CatalogSchemaValidator(
